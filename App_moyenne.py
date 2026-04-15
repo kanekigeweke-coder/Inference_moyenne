@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import streamlit as st
 from scipy.stats import norm, t
 
-
 st.set_page_config(page_title="Test sur une moyenne", layout="wide")
 
 
@@ -20,6 +19,12 @@ def format_percent_clean(alpha: float) -> str:
 
 def format_prob_clean(x: float) -> str:
     return f"{x:.4f}".rstrip("0").rstrip(".")
+
+
+def format_number_clean(x: float, decimals: int = 4) -> str:
+    if abs(x - round(x)) < 1e-10:
+        return str(int(round(x)))
+    return f"{x:.{decimals}f}".rstrip("0").rstrip(".")
 
 
 def parse_observations(text: str) -> List[float]:
@@ -86,9 +91,10 @@ def test_moyenne_general(
                     "Si l'écart-type de la population est connu, il faut fournir l'écart-type ou la variance de la population."
                 )
         else:
-            if ecart_type is None and variance is None:
-                ecart_type = ecart_type_echantillon
-                variance = variance_echantillon
+            # Si sigma est inconnu et qu'on a les observations,
+            # on impose automatiquement l'écart-type empirique.
+            ecart_type = ecart_type_echantillon
+            variance = variance_echantillon
 
     else:
         source = "statistiques résumées"
@@ -118,6 +124,8 @@ def test_moyenne_general(
     statistique = (moyenne_echantillon - mu0) / erreur_standard
     alpha_label = format_percent_clean(alpha)
 
+    mu0_label = format_number_clean(mu0)
+
     if sigma_connu:
         loi = "Normale"
         ddl = None
@@ -127,63 +135,63 @@ def test_moyenne_general(
             quantile = norm.ppf(1 - alpha / 2)
             rejet = abs(statistique) > quantile
             p_value = 2 * (1 - norm.cdf(abs(statistique)))
-            H1 = f"\\mu \\neq {mu0}"
+            H1 = f"\\mu \\neq {mu0_label}"
 
             if rejet:
                 conclusion = (
                     rf"Comme $|Z_{{obs}}| = {abs(statistique):.4f} > {quantile:.4f} = z_{{\alpha/2}}$, "
                     rf"la statistique observée appartient à la zone de rejet. "
                     rf"On rejette donc $H_0$ au seuil de {alpha_label}. "
-                    rf"La moyenne est statistiquement différente de {mu0}."
+                    rf"La moyenne est statistiquement (ou significativement) différente de {mu0_label}."
                 )
             else:
                 conclusion = (
                     rf"Comme $|Z_{{obs}}| = {abs(statistique):.4f} < {quantile:.4f} = z_{{\alpha/2}}$, "
-                    rf"la statistique observée appartient à la zone de non-rejet. "
-                    rf"On ne rejette donc pas $H_0$ au seuil de {alpha_label}. "
-                    rf"La moyenne n'est pas statistiquement différente de {mu0}."
+                    rf"la statistique observée appartient à la zone de non rejet. "
+                    rf"On ne rejette pas donc $H_0$ au seuil de {alpha_label}. "
+                    rf"La moyenne n'est pas statistiquement (ou significativement) différente de {mu0_label}."
                 )
 
         elif alternative == "left":
             quantile = norm.ppf(alpha)
             rejet = statistique < quantile
             p_value = norm.cdf(statistique)
-            H1 = f"\\mu < {mu0}"
+            H1 = f"\\mu < {mu0_label}"
 
             if rejet:
                 conclusion = (
                     rf"Comme $Z_{{obs}} = {statistique:.4f} < {quantile:.4f} = -z_{{\alpha}}$, "
                     rf"la statistique observée appartient à la zone de rejet. "
                     rf"On rejette donc $H_0$ au seuil de {alpha_label}. "
-                    rf"La moyenne est statistiquement inférieure à {mu0}."
+                    rf"La moyenne est statistiquement (ou significativement) inférieure à {mu0_label}."
                 )
             else:
                 conclusion = (
                     rf"Comme $Z_{{obs}} = {statistique:.4f} > {quantile:.4f} = -z_{{\alpha}}$, "
-                    rf"la statistique observée appartient à la zone de non-rejet. "
-                    rf"On ne rejette donc pas $H_0$ au seuil de {alpha_label}. "
-                    rf"La moyenne n'est pas statistiquement inférieure à {mu0}."
+                    rf"la statistique observée appartient à la zone de non rejet. "
+                    rf"On ne rejette pas donc $H_0$ au seuil de {alpha_label}. "
+                    rf"La moyenne n'est pas statistiquement (ou significativement) inférieure à {mu0_label}."
                 )
 
         else:
             quantile = norm.ppf(1 - alpha)
             rejet = statistique > quantile
             p_value = 1 - norm.cdf(statistique)
-            H1 = f"\\mu > {mu0}"
+            H1 = f"\\mu > {mu0_label}"
 
             if rejet:
                 conclusion = (
                     rf"Comme $Z_{{obs}} = {statistique:.4f} > {quantile:.4f} = z_{{\alpha}}$, "
                     rf"la statistique observée appartient à la zone de rejet. "
                     rf"On rejette donc $H_0$ au seuil de {alpha_label}. "
-                    rf"La moyenne est statistiquement supérieure à {mu0}."
+                    rf"La moyenne est statistiquement (ou significativement) supérieure à {mu0_label}."
                 )
             else:
                 conclusion = (
                     rf"Comme $Z_{{obs}} = {statistique:.4f} < {quantile:.4f} = z_{{\alpha}}$, "
-                    rf"la statistique observée appartient à la zone de non-rejet. "
-                    rf"On ne rejette donc pas $H_0$ au seuil de {alpha_label}. "
-                    rf"La moyenne n'est pas statistiquement supérieure à {mu0}."
+                    rf"la statistique observée appartient à la zone de non rejet. "
+                    rf"On ne rejette pas donc $H_0$ au seuil de {alpha_label}. "
+                    rf"La moyenne n'est pas statistiquement (ou significativement) supérieure à {mu0_label}."
                 )
 
     else:
@@ -195,63 +203,63 @@ def test_moyenne_general(
             quantile = t.ppf(1 - alpha / 2, ddl)
             rejet = abs(statistique) > quantile
             p_value = 2 * (1 - t.cdf(abs(statistique), ddl))
-            H1 = f"\\mu \\neq {mu0}"
+            H1 = f"\\mu \\neq {mu0_label}"
 
             if rejet:
                 conclusion = (
                     rf"Comme $|T_{{obs}}| = {abs(statistique):.4f} > {quantile:.4f} = t_{{\alpha/2}}$, "
                     rf"la statistique observée appartient à la zone de rejet. "
                     rf"On rejette donc $H_0$ au seuil de {alpha_label}. "
-                    rf"La moyenne est statistiquement différente de {mu0}."
+                    rf"La moyenne est statistiquement (ou significativement) différente de {mu0_label}."
                 )
             else:
                 conclusion = (
                     rf"Comme $|T_{{obs}}| = {abs(statistique):.4f} < {quantile:.4f} = t_{{\alpha/2}}$, "
-                    rf"la statistique observée appartient à la zone de non-rejet. "
-                    rf"On ne rejette donc pas $H_0$ au seuil de {alpha_label}. "
-                    rf"La moyenne n'est pas statistiquement différente de {mu0}."
+                    rf"la statistique observée appartient à la zone de non rejet. "
+                    rf"On ne rejette pas donc $H_0$ au seuil de {alpha_label}. "
+                    rf"La moyenne n'est pas statistiquement (ou significativement) différente de {mu0_label}."
                 )
 
         elif alternative == "left":
             quantile = t.ppf(alpha, ddl)
             rejet = statistique < quantile
             p_value = t.cdf(statistique, ddl)
-            H1 = f"\\mu < {mu0}"
+            H1 = f"\\mu < {mu0_label}"
 
             if rejet:
                 conclusion = (
                     rf"Comme $T_{{obs}} = {statistique:.4f} < {quantile:.4f} = -t_{{\alpha}}$, "
                     rf"la statistique observée appartient à la zone de rejet. "
                     rf"On rejette donc $H_0$ au seuil de {alpha_label}. "
-                    rf"La moyenne est statistiquement inférieure à {mu0}."
+                    rf"La moyenne est statistiquement (ou significativement) inférieure à {mu0_label}."
                 )
             else:
                 conclusion = (
                     rf"Comme $T_{{obs}} = {statistique:.4f} > {quantile:.4f} = -t_{{\alpha}}$, "
-                    rf"la statistique observée appartient à la zone de non-rejet. "
-                    rf"On ne rejette donc pas $H_0$ au seuil de {alpha_label}. "
-                    rf"La moyenne n'est pas statistiquement inférieure à {mu0}."
+                    rf"la statistique observée appartient à la zone de non rejet. "
+                    rf"On ne rejette pas donc $H_0$ au seuil de {alpha_label}. "
+                    rf"La moyenne n'est pas statistiquement (ou significativement) inférieure à {mu0_label}."
                 )
 
         else:
             quantile = t.ppf(1 - alpha, ddl)
             rejet = statistique > quantile
             p_value = 1 - t.cdf(statistique, ddl)
-            H1 = f"\\mu > {mu0}"
+            H1 = f"\\mu > {mu0_label}"
 
             if rejet:
                 conclusion = (
                     rf"Comme $T_{{obs}} = {statistique:.4f} > {quantile:.4f} = t_{{\alpha}}$, "
                     rf"la statistique observée appartient à la zone de rejet. "
                     rf"On rejette donc $H_0$ au seuil de {alpha_label}. "
-                    rf"La moyenne est statistiquement supérieure à {mu0}."
+                    rf"La moyenne est statistiquement (ou significativement) supérieure à {mu0_label}."
                 )
             else:
                 conclusion = (
                     rf"Comme $T_{{obs}} = {statistique:.4f} < {quantile:.4f} = t_{{\alpha}}$, "
-                    rf"la statistique observée appartient à la zone de non-rejet. "
-                    rf"On ne rejette donc pas $H_0$ au seuil de {alpha_label}. "
-                    rf"La moyenne n'est pas statistiquement supérieure à {mu0}."
+                    rf"la statistique observée appartient à la zone de non rejet. "
+                    rf"On ne rejette pas donc $H_0$ au seuil de {alpha_label}. "
+                    rf"La moyenne n'est pas statistiquement (ou significativement) supérieure à {mu0_label}."
                 )
 
     return {
@@ -264,6 +272,7 @@ def test_moyenne_general(
         "variance_utilisee": ecart_type ** 2,
         "erreur_standard": erreur_standard,
         "mu0": mu0,
+        "mu0_label": mu0_label,
         "alpha": alpha,
         "alpha_label": alpha_label,
         "alternative": alternative,
@@ -280,39 +289,31 @@ def test_moyenne_general(
     }
 
 
-def intervalle_confiance_moyenne(resultats: dict):
-    """
-    Calcule l'intervalle de confiance bilatéral de niveau (1-alpha)
-    pour la moyenne.
-    """
-
+def calcul_intervalle_confiance(resultats: dict):
     xbar = resultats["moyenne_echantillon"]
-    n = resultats["n"]
     alpha = resultats["alpha"]
-    erreur_standard = resultats["erreur_standard"]
-    sigma_connu = resultats["sigma_connu"]
+    se = resultats["erreur_standard"]
 
-    if sigma_connu:
+    if resultats["sigma_connu"]:
         quantile_ic = norm.ppf(1 - alpha / 2)
-        borne_inf = xbar - quantile_ic * erreur_standard
-        borne_sup = xbar + quantile_ic * erreur_standard
+        borne_inf = xbar - quantile_ic * se
+        borne_sup = xbar + quantile_ic * se
         return {
-            "type": "normale",
             "quantile_ic": quantile_ic,
             "borne_inf": borne_inf,
             "borne_sup": borne_sup,
+            "type": "normale",
         }
     else:
         ddl = resultats["ddl"]
         quantile_ic = t.ppf(1 - alpha / 2, ddl)
-        borne_inf = xbar - quantile_ic * erreur_standard
-        borne_sup = xbar + quantile_ic * erreur_standard
+        borne_inf = xbar - quantile_ic * se
+        borne_sup = xbar + quantile_ic * se
         return {
-            "type": "student",
             "quantile_ic": quantile_ic,
             "borne_inf": borne_inf,
             "borne_sup": borne_sup,
-            "ddl": ddl,
+            "type": "student",
         }
 
 
@@ -450,14 +451,15 @@ def tracer_distribution(resultats: dict):
         ),
     )
 
+    mu0_label = resultats["mu0_label"]
     loi_texte = "Loi normale centrée réduite" if sigma_connu else f"Loi de Student à {ddl} ddl"
 
     if alternative == "bilateral":
-        titre_test = f"Test bilatéral : H₀ : μ = {resultats['mu0']} contre H₁ : μ ≠ {resultats['mu0']}"
+        titre_test = f"Test bilatéral : H₀ : μ = {mu0_label} contre H₁ : μ ≠ {mu0_label}"
     elif alternative == "left":
-        titre_test = f"Test unilatéral gauche : H₀ : μ = {resultats['mu0']} contre H₁ : μ < {resultats['mu0']}"
+        titre_test = f"Test unilatéral gauche : H₀ : μ = {mu0_label} contre H₁ : μ < {mu0_label}"
     else:
-        titre_test = f"Test unilatéral droit : H₀ : μ = {resultats['mu0']} contre H₁ : μ > {resultats['mu0']}"
+        titre_test = f"Test unilatéral droit : H₀ : μ = {mu0_label} contre H₁ : μ > {mu0_label}"
 
     ax.set_title(
         f"{titre_test}\n{loi_texte} (α = {alpha_pct}, {nom_stat.lower()}_obs = {statistique:.4f})",
@@ -621,30 +623,11 @@ with col2:
                         value=1.0,
                         step=0.1
                     )
-
             else:
-                choix_optionnel = st.selectbox(
-                    "Information complémentaire",
-                    [
-                        "Écart-type empirique de l'échantillon",
-                        "Variance empirique de l'échantillon"
-                    ]
+                st.info(
+                    "Comme les observations sont fournies et que l'écart-type de la population est inconnu, "
+                    "l'application utilise automatiquement l'écart-type empirique calculé sur l'échantillon."
                 )
-
-                if choix_optionnel == "Écart-type empirique de l'échantillon":
-                    ecart_type = st.number_input(
-                        "Valeur de l'écart-type empirique de l'échantillon",
-                        min_value=0.0,
-                        value=4.0,
-                        step=0.1
-                    )
-                elif choix_optionnel == "Variance empirique de l'échantillon":
-                    variance = st.number_input(
-                        "Valeur de la variance empirique de l'échantillon",
-                        min_value=0.0,
-                        value=16.0,
-                        step=0.1
-                    )
 
     else:
         n = st.number_input(
@@ -721,7 +704,7 @@ if st.button("Effectuer le test"):
             sigma_connu=sigma_connu,
         )
 
-        ic = intervalle_confiance_moyenne(resultats)
+        ic = calcul_intervalle_confiance(resultats)
 
         st.subheader("Résultats numériques")
 
@@ -734,7 +717,7 @@ if st.button("Effectuer le test"):
         st.write(f"**Loi utilisée :** {resultats['loi']}")
         if resultats["ddl"] is not None:
             st.write(f"**Degrés de liberté :** {resultats['ddl']}")
-        st.write(f"**Quantile critique du test :** {resultats['quantile_critique']:.4f}")
+        st.write(f"**Quantile critique :** {resultats['quantile_critique']:.4f}")
 
         if resultats["source"] == "observations":
             st.write(f"**Variance empirique de l'échantillon :** {resultats['variance_echantillon']:.4f}")
@@ -747,8 +730,319 @@ if st.button("Effectuer le test"):
                 st.write(f"**Variance empirique de l'échantillon utilisée :** {resultats['variance_utilisee']:.4f}")
                 st.write(f"**Écart-type empirique de l'échantillon utilisé :** {resultats['ecart_type_utilise']:.4f}")
 
-        st.write(f"**Intervalle de confiance :** [{ic['borne_inf']:.4f} ; {ic['borne_sup']:.4f}]")
+        # -------------------------------------------------------
+        # INTERVALLE DE CONFIANCE AVANT LA MOYENNE OBSERVÉE
+        # -------------------------------------------------------
+        st.subheader("Intervalle de confiance pour la moyenne")
 
+        niveau_label = format_percent_clean(1 - resultats["alpha"])
+        mu0_label = resultats["mu0_label"]
+
+        if resultats["sigma_connu"]:
+            st.markdown(
+                f"**Intervalle de confiance à niveau {niveau_label} :**"
+            )
+
+            st.latex(
+                r"\frac{\bar X - \mu}{\sigma/\sqrt{n}} \sim \mathcal{N}(0,1)"
+            )
+
+            st.latex(
+                r"""
+\Rightarrow
+P\left(
+- z_{\frac{\alpha}{2}}
+\le
+\frac{\bar X - \mu}{\sigma/\sqrt{n}}
+\le
+z_{\frac{\alpha}{2}}
+\right)
+=
+1-\alpha
+"""
+            )
+
+            st.latex(
+                r"""
+\Rightarrow
+P\left(
+- z_{\frac{\alpha}{2}} \frac{\sigma}{\sqrt{n}}
+\le
+\bar X - \mu
+\le
+z_{\frac{\alpha}{2}} \frac{\sigma}{\sqrt{n}}
+\right)
+=
+1-\alpha
+"""
+            )
+
+            st.latex(
+                r"""
+\Rightarrow
+P\left(
+\bar X - z_{\frac{\alpha}{2}} \frac{\sigma}{\sqrt{n}}
+\le
+\mu
+\le
+\bar X + z_{\frac{\alpha}{2}} \frac{\sigma}{\sqrt{n}}
+\right)
+=
+1-\alpha
+"""
+            )
+
+            st.latex(
+                r"""
+\Rightarrow
+IC_{1-\alpha}(\mu)
+=
+\left[
+\bar{X} - z_{\frac{\alpha}{2}} \frac{\sigma}{\sqrt{n}}
+\ ;\
+\bar{X} + z_{\frac{\alpha}{2}} \frac{\sigma}{\sqrt{n}}
+\right]
+"""
+            )
+
+            st.markdown(f"**Intervalle de confiance à niveau {niveau_label} :**")
+
+            st.latex(
+                rf"""
+IC_{{{niveau_label}}}(\mu)
+=
+\left[
+\bar{{X}} - z_{{{format_prob_clean(resultats['alpha']/2)}}}\times\frac{{\sigma}}{{\sqrt{{n}}}}
+\ ;\
+\bar{{X}} + z_{{{format_prob_clean(resultats['alpha']/2)}}}\times\frac{{\sigma}}{{\sqrt{{n}}}}
+\right]
+"""
+            )
+
+            st.markdown("**Après observation :**")
+
+            st.latex(
+                rf"""
+IC_{{{niveau_label}}}(\mu)
+=
+\left[
+\bar{{x}} - z_{{{1 - resultats['alpha']/2:.3f}}}\times\frac{{\sigma}}{{\sqrt{{n}}}}
+\ ;\
+\bar{{x}} + z_{{{1 - resultats['alpha']/2:.3f}}}\times\frac{{\sigma}}{{\sqrt{{n}}}}
+\right]
+"""
+            )
+
+            st.markdown(
+                rf"En substituant $\bar{{x}} = {resultats['moyenne_echantillon']:.4f}$, "
+                rf"$z_{{{format_prob_clean(resultats['alpha']/2)}}} = {ic['quantile_ic']:.4f}$, "
+                rf"$\sigma = {resultats['ecart_type_utilise']:.4f}$ et $n = {resultats['n']}$ :"
+            )
+
+            st.latex(
+                rf"""
+\begin{{aligned}}
+IC_{{{niveau_label}}}(\mu)
+&= \left[
+{resultats['moyenne_echantillon']:.4f}
+- {ic['quantile_ic']:.4f}\times\frac{{{resultats['ecart_type_utilise']:.4f}}}{{\sqrt{{{resultats['n']}}}}}
+\ ;\
+{resultats['moyenne_echantillon']:.4f}
++ {ic['quantile_ic']:.4f}\times\frac{{{resultats['ecart_type_utilise']:.4f}}}{{\sqrt{{{resultats['n']}}}}}
+\right] \\[6pt]
+&= \left[
+{resultats['moyenne_echantillon']:.4f}
+- {ic['quantile_ic']:.4f}\times {resultats['erreur_standard']:.4f}
+\ ;\
+{resultats['moyenne_echantillon']:.4f}
++ {ic['quantile_ic']:.4f}\times {resultats['erreur_standard']:.4f}
+\right] \\[6pt]
+&= \left[
+{resultats['moyenne_echantillon']:.4f - ic['quantile_ic'] * resultats['erreur_standard']:.4f}
+\ ;\
+{resultats['moyenne_echantillon']:.4f + ic['quantile_ic'] * resultats['erreur_standard']:.4f}
+\right]
+\end{{aligned}}
+"""
+            )
+
+            st.latex(
+                rf"\boxed{{IC_{{{niveau_label}}}(\mu)=\left[{ic['borne_inf']:.4f}\ ;\ {ic['borne_sup']:.4f}\right]}}"
+            )
+
+        else:
+            st.markdown(
+                f"**Intervalle de confiance à niveau {niveau_label} :**"
+            )
+
+            st.latex(
+                rf"\frac{{\bar X - \mu}}{{S/\sqrt{{n}}}} \sim t_{{{resultats['ddl']}}}"
+            )
+
+            st.latex(
+                r"""
+\Rightarrow
+P\left(
+- t_{n-1}^{\frac{\alpha}{2}}
+\le
+\frac{\bar X - \mu}{S/\sqrt{n}}
+\le
+t_{n-1}^{\frac{\alpha}{2}}
+\right)
+=
+1-\alpha
+"""
+            )
+
+            st.latex(
+                r"""
+\Rightarrow
+P\left(
+- t_{n-1}^{\frac{\alpha}{2}} \frac{S}{\sqrt{n}}
+\le
+\bar X - \mu
+\le
+t_{n-1}^{\frac{\alpha}{2}} \frac{S}{\sqrt{n}}
+\right)
+=
+1-\alpha
+"""
+            )
+
+            st.latex(
+                r"""
+\Rightarrow
+P\left(
+\bar X - t_{n-1}^{\frac{\alpha}{2}} \frac{S}{\sqrt{n}}
+\le
+\mu
+\le
+\bar X + t_{n-1}^{\frac{\alpha}{2}} \frac{S}{\sqrt{n}}
+\right)
+=
+1-\alpha
+"""
+            )
+
+            st.latex(
+                r"""
+\Rightarrow
+IC_{1-\alpha}(\mu)
+=
+\left[
+\bar{X} - t_{n-1}^{\frac{\alpha}{2}} \frac{S}{\sqrt{n}}
+\ ;\
+\bar{X} + t_{n-1}^{\frac{\alpha}{2}} \frac{S}{\sqrt{n}}
+\right]
+"""
+            )
+
+            st.markdown(f"**Intervalle de confiance à niveau {niveau_label} :**")
+
+            st.latex(
+                rf"""
+IC_{{{niveau_label}}}(\mu)
+=
+\left[
+\bar{{X}} - t_{{n-1}}^{{{format_prob_clean(resultats['alpha']/2)}}}\times\frac{{S}}{{\sqrt{{n}}}}
+\ ;\
+\bar{{X}} + t_{{n-1}}^{{{format_prob_clean(resultats['alpha']/2)}}}\times\frac{{S}}{{\sqrt{{n}}}}
+\right]
+"""
+            )
+
+            st.markdown("**Après observation :**")
+
+            st.latex(
+                rf"""
+IC_{{{niveau_label}}}(\mu)
+=
+\left[
+\bar{{x}} - t_{{{resultats['ddl']}}}^{{{format_prob_clean(resultats['alpha']/2)}}}\times\frac{{s}}{{\sqrt{{n}}}}
+\ ;\
+\bar{{x}} + t_{{{resultats['ddl']}}}^{{{format_prob_clean(resultats['alpha']/2)}}}\times\frac{{s}}{{\sqrt{{n}}}}
+\right]
+"""
+            )
+
+            st.markdown(
+                rf"En substituant $\bar{{x}} = {resultats['moyenne_echantillon']:.4f}$, "
+                rf"$t_{{{resultats['ddl']}}}^{{{format_prob_clean(resultats['alpha']/2)}}} \approx {ic['quantile_ic']:.4f}$, "
+                rf"$s = {resultats['ecart_type_utilise']:.4f}$ et $n = {resultats['n']}$ :"
+            )
+
+            st.latex(
+                rf"""
+\begin{{aligned}}
+IC_{{{niveau_label}}}(\mu)
+&= \left[
+{resultats['moyenne_echantillon']:.4f}
+- {ic['quantile_ic']:.4f}\times\frac{{{resultats['ecart_type_utilise']:.4f}}}{{\sqrt{{{resultats['n']}}}}}
+\ ;\
+{resultats['moyenne_echantillon']:.4f}
++ {ic['quantile_ic']:.4f}\times\frac{{{resultats['ecart_type_utilise']:.4f}}}{{\sqrt{{{resultats['n']}}}}}
+\right] \\[6pt]
+&= \left[
+{resultats['moyenne_echantillon']:.4f}
+- {ic['quantile_ic']:.4f}\times {resultats['erreur_standard']:.4f}
+\ ;\
+{resultats['moyenne_echantillon']:.4f}
++ {ic['quantile_ic']:.4f}\times {resultats['erreur_standard']:.4f}
+\right] \\[6pt]
+&= \left[
+{resultats['moyenne_echantillon']:.4f - ic['quantile_ic'] * resultats['erreur_standard']:.4f}
+\ ;\
+{resultats['moyenne_echantillon']:.4f + ic['quantile_ic'] * resultats['erreur_standard']:.4f}
+\right]
+\end{{aligned}}
+"""
+            )
+
+            st.latex(
+                rf"\boxed{{IC_{{{niveau_label}}}(\mu)=\left[{ic['borne_inf']:.4f}\ ;\ {ic['borne_sup']:.4f}\right]}}"
+            )
+
+        if resultats["alternative"] == "bilateral":
+            st.markdown("**Test de $H_0 : \mu = \mu_0$ à l’aide de l’intervalle de confiance :**")
+            st.markdown(
+                rf"Sur la base de l’intervalle de confiance précédent, on rejette "
+                rf"$H_0 : \mu = \mu_0$ au niveau $\alpha = {resultats['alpha_label']}$ "
+                rf"si $\mu_0 \notin IC_{{{niveau_label}}}(\mu)$."
+            )
+            st.markdown("Il y a 2 cas :")
+            st.markdown(
+                rf"i) $\mu_0 \in IC_{{{niveau_label}}}(\mu)$ $\implies$ **on ne rejette pas** "
+                rf"$H_0$ au niveau $\alpha = {resultats['alpha_label']}$."
+            )
+            st.markdown(
+                rf"ii) $\mu_0 \notin IC_{{{niveau_label}}}(\mu)$ $\implies$ **on rejette** "
+                rf"$H_0$ au niveau $\alpha = {resultats['alpha_label']}$."
+            )
+
+            if ic["borne_inf"] <= resultats["mu0"] <= ic["borne_sup"]:
+                st.markdown("**Application à notre cas :**")
+                st.latex(
+                    rf"{ic['borne_inf']:.4f} \le {mu0_label} \le {ic['borne_sup']:.4f}"
+                )
+                st.markdown(
+                    rf"Comme $\mu_0 = {mu0_label}$ appartient à l’intervalle de confiance "
+                    rf"$IC_{{{niveau_label}}}(\mu)$, **on ne rejette pas** $H_0$ "
+                    rf"au niveau $\alpha = {resultats['alpha_label']}$."
+                )
+            else:
+                st.markdown("**Application à notre cas :**")
+                st.latex(
+                    rf"{mu0_label} \notin \left[{ic['borne_inf']:.4f}\ ;\ {ic['borne_sup']:.4f}\right]"
+                )
+                st.markdown(
+                    rf"Comme $\mu_0 = {mu0_label}$ n’appartient pas à l’intervalle de confiance "
+                    rf"$IC_{{{niveau_label}}}(\mu)$, **on rejette** $H_0$ "
+                    rf"au niveau $\alpha = {resultats['alpha_label']}$."
+                )
+
+        # -------------------------------------------------------
+        # PRÉSENTATION DÉTAILLÉE DU TEST
+        # -------------------------------------------------------
         st.subheader("Présentation détaillée du test")
 
         st.markdown("**Moyenne observée dans l’échantillon :**")
@@ -757,7 +1051,7 @@ if st.button("Effectuer le test"):
         st.markdown(f"**Test sur la moyenne au niveau α = {resultats['alpha_label']}**")
 
         st.markdown("**i) Les hypothèses du test :**")
-        st.latex(rf"H_0 :\ \mu = {resultats['mu0']}")
+        st.latex(rf"H_0 :\ \mu = {resultats['mu0_label']}")
         st.write("contre")
         st.latex(rf"H_1 :\ {resultats['H1']}")
 
@@ -766,21 +1060,21 @@ if st.button("Effectuer le test"):
         if resultats["sigma_connu"]:
             st.write("Sous H₀, la statistique de test suit une loi normale centrée réduite :")
             st.latex(
-                rf"Z = \frac{{\bar{{X}} - \mu_0}}{{\sigma/\sqrt{{n}}}} \sim_{{H_0}} \mathcal{{N}}(0,1), \qquad \mu_0 = {resultats['mu0']}"
+                rf"Z = \frac{{\bar{{X}} - \mu_0}}{{\sigma/\sqrt{{n}}}} \sim_{{H_0}} \mathcal{{N}}(0,1), \qquad \mu_0 = {resultats['mu0_label']}"
             )
             st.write("Calculons la statistique de test :")
             st.latex(
-                rf"Z_{{obs}} = \frac{{{resultats['moyenne_echantillon']:.4f} - {resultats['mu0']}}}{{{resultats['erreur_standard']:.5f}}}"
+                rf"Z_{{obs}} = \frac{{{resultats['moyenne_echantillon']:.4f} - {resultats['mu0_label']}}}{{{resultats['erreur_standard']:.5f}}}"
                 rf"\approx {resultats['statistique_test']:.4f}"
             )
         else:
             st.write("Sous H₀, la statistique de test suit une loi de Student :")
             st.latex(
-                rf"T = \frac{{\bar{{X}} - \mu_0}}{{S/\sqrt{{n}}}} \sim_{{H_0}} t_{{{resultats['ddl']}}}, \qquad \mu_0 = {resultats['mu0']}"
+                rf"T = \frac{{\bar{{X}} - \mu_0}}{{S/\sqrt{{n}}}} \sim_{{H_0}} t_{{{resultats['ddl']}}}, \qquad \mu_0 = {resultats['mu0_label']}"
             )
             st.write("Calculons la statistique de test :")
             st.latex(
-                rf"T_{{obs}} = \frac{{{resultats['moyenne_echantillon']:.4f} - {resultats['mu0']}}}{{{resultats['erreur_standard']:.5f}}}"
+                rf"T_{{obs}} = \frac{{{resultats['moyenne_echantillon']:.4f} - {resultats['mu0_label']}}}{{{resultats['erreur_standard']:.5f}}}"
                 rf"\approx {resultats['statistique_test']:.4f}"
             )
 
@@ -827,165 +1121,6 @@ if st.button("Effectuer le test"):
 
         st.markdown("**Conclusion :**")
         st.markdown(resultats["conclusion"])
-
-        st.subheader("Intervalle de confiance pour la moyenne")
-
-        niveau_confiance = (1 - resultats["alpha"]) * 100
-
-        if resultats["sigma_connu"]:
-            st.markdown("**Construction théorique de l’intervalle de confiance :**")
-            st.latex(r"""
-\frac{\bar X - \mu}{\sigma/\sqrt{n}} \sim \mathcal{N}(0,1)
-""")
-            st.latex(r"""
-P\left(
-- z_{\frac{\alpha}{2}}
-\le
-\frac{\bar X - \mu}{\sigma/\sqrt{n}}
-\le
-z_{\frac{\alpha}{2}}
-\right)
-=
-1-\alpha
-""")
-            st.latex(r"""
-P\left(
-\bar X - z_{\frac{\alpha}{2}} \frac{\sigma}{\sqrt{n}}
-\le
-\mu
-\le
-\bar X + z_{\frac{\alpha}{2}} \frac{\sigma}{\sqrt{n}}
-\right)
-=
-1-\alpha
-""")
-            st.latex(r"""
-IC_{1-\alpha}(\mu)
-=
-\left[
-\bar{X} - z_{\frac{\alpha}{2}} \frac{\sigma}{\sqrt{n}}
-\ ;\
-\bar{X} + z_{\frac{\alpha}{2}} \frac{\sigma}{\sqrt{n}}
-\right]
-""")
-
-            st.markdown(f"**Intervalle de confiance à niveau {niveau_confiance:.0f}% :**")
-            st.latex(
-                rf"IC_{{{niveau_confiance:.0f}\%}}(\mu)=\left[\bar X - z_{{{format_prob_clean(resultats['alpha']/2)}}}\times \frac{{\sigma}}{{\sqrt{{n}}}}\ ;\ \bar X + z_{{{format_prob_clean(resultats['alpha']/2)}}}\times \frac{{\sigma}}{{\sqrt{{n}}}}\right]"
-            )
-
-            st.markdown("**Après observation :**")
-            st.latex(
-                rf"IC_{{{niveau_confiance:.0f}\%}}(\mu)=\left[{resultats['moyenne_echantillon']:.4f} - {ic['quantile_ic']:.4f}\times {resultats['erreur_standard']:.4f}\ ;\ {resultats['moyenne_echantillon']:.4f} + {ic['quantile_ic']:.4f}\times {resultats['erreur_standard']:.4f}\right]"
-            )
-            st.latex(
-                rf"IC_{{{niveau_confiance:.0f}\%}}(\mu)=\left[{ic['borne_inf']:.4f}\ ;\ {ic['borne_sup']:.4f}\right]"
-            )
-
-        else:
-            st.markdown("**Construction théorique de l’intervalle de confiance :**")
-            st.latex(r"""
-\frac{\bar X - \mu}{S/\sqrt{n}} \sim t_{n-1}
-""")
-            st.latex(r"""
-P\left(
-- t_{n-1}^{\frac{\alpha}{2}}
-\le
-\frac{\bar X - \mu}{S/\sqrt{n}}
-\le
-t_{n-1}^{\frac{\alpha}{2}}
-\right)
-=
-1-\alpha
-""")
-            st.latex(r"""
-P\left(
-\bar X - t_{n-1}^{\frac{\alpha}{2}} \frac{S}{\sqrt{n}}
-\le
-\mu
-\le
-\bar X + t_{n-1}^{\frac{\alpha}{2}} \frac{S}{\sqrt{n}}
-\right)
-=
-1-\alpha
-""")
-            st.latex(r"""
-IC_{1-\alpha}(\mu)
-=
-\left[
-\bar{X} - t_{n-1}^{\frac{\alpha}{2}} \frac{S}{\sqrt{n}}
-\ ;\
-\bar{X} + t_{n-1}^{\frac{\alpha}{2}} \frac{S}{\sqrt{n}}
-\right]
-""")
-
-            st.markdown(f"**Intervalle de confiance à niveau {niveau_confiance:.0f}% :**")
-            st.latex(
-                rf"IC_{{{niveau_confiance:.0f}\%}}(\mu)=\left[\bar X - t_{{{resultats['ddl']}}}^{{{format_prob_clean(resultats['alpha']/2)}}}\times \frac{{S}}{{\sqrt{{n}}}}\ ;\ \bar X + t_{{{resultats['ddl']}}}^{{{format_prob_clean(resultats['alpha']/2)}}}\times \frac{{S}}{{\sqrt{{n}}}}\right]"
-            )
-
-            st.markdown("**Après observation :**")
-            st.latex(
-                rf"IC_{{{niveau_confiance:.0f}\%}}(\mu)=\left[{resultats['moyenne_echantillon']:.4f} - {ic['quantile_ic']:.4f}\times {resultats['erreur_standard']:.4f}\ ;\ {resultats['moyenne_echantillon']:.4f} + {ic['quantile_ic']:.4f}\times {resultats['erreur_standard']:.4f}\right]"
-            )
-            st.latex(
-                rf"IC_{{{niveau_confiance:.0f}\%}}(\mu)=\left[{ic['borne_inf']:.4f}\ ;\ {ic['borne_sup']:.4f}\right]"
-            )
-
-        st.subheader("Test de H₀ à l’aide de l’intervalle de confiance")
-
-        if resultats["alternative"] == "bilateral":
-            st.markdown(
-                rf"""
-Sur la base de l’intervalle de confiance précédent, on rejette
-$H_0:\mu={resultats['mu0']}$
-au niveau $\alpha={format_percent_clean(resultats['alpha'])}$
-si $\mu_0 \notin IC_{{{niveau_confiance:.0f}\%}}(\mu)$.
-"""
-            )
-
-            st.markdown("Il y a 2 cas :")
-
-            st.markdown(
-                rf"""
-**i)** $\mu_0 \in IC_{{{niveau_confiance:.0f}\%}}(\mu)$
-$\implies$ **on ne rejette pas** $H_0$ au niveau
-$\alpha={format_percent_clean(resultats['alpha'])}$.
-"""
-            )
-
-            st.markdown(
-                rf"""
-**ii)** $\mu_0 \notin IC_{{{niveau_confiance:.0f}\%}}(\mu)$
-$\implies$ **on rejette** $H_0$ au niveau
-$\alpha={format_percent_clean(resultats['alpha'])}$.
-"""
-            )
-
-            if ic["borne_inf"] <= resultats["mu0"] <= ic["borne_sup"]:
-                st.markdown("**Application à notre cas :**")
-                st.latex(
-                    rf"{ic['borne_inf']:.4f} \le {resultats['mu0']} \le {ic['borne_sup']:.4f}"
-                )
-                st.markdown(
-                    rf"Ainsi, $\mu_0 = {resultats['mu0']}$ appartient à l’intervalle de confiance "
-                    rf"$IC_{{{niveau_confiance:.0f}\%}}(\mu)$. Donc, **on ne rejette pas** $H_0$."
-                )
-            else:
-                st.markdown("**Application à notre cas :**")
-                st.latex(
-                    rf"{resultats['mu0']} \notin \left[{ic['borne_inf']:.4f}\ ;\ {ic['borne_sup']:.4f}\right]"
-                )
-                st.markdown(
-                    rf"Ainsi, $\mu_0 = {resultats['mu0']}$ n’appartient pas à l’intervalle de confiance "
-                    rf"$IC_{{{niveau_confiance:.0f}\%}}(\mu)$. Donc, **on rejette** $H_0$."
-                )
-        else:
-            st.info(
-                "La règle de décision par appartenance de μ₀ à l’intervalle de confiance bilatéral "
-                "est la plus naturelle pour le test bilatéral. Pour les tests unilatéraux, "
-                "on s’appuie en priorité sur la statistique de test, la région critique et la p-value."
-            )
 
         st.subheader("Graphique de la distribution du test")
         fig = tracer_distribution(resultats)
